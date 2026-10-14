@@ -93,7 +93,7 @@ Andmestiku kirjeldus
 Lihtsaim viis andmete lugemiseks on kasutada `read_csv` käsku:
 
 ```{r}
-Isd <- read_csv('../../data/Islander_data.csv')
+Isd <- read_csv('../data/Islander_data.csv')
 
 Isd
 ```
@@ -180,7 +180,17 @@ erinevate ravimite ja nende dooside mõju mälu taastamisele.
 
 ```{r}
 # Loo vanuserühma veerg
-
+Isd <- Isd %>%
+  mutate(
+    age_group = case_when(
+      age < 30 ~ "Noor",
+      age >= 30 & age <= 50 ~ "Keskealine",
+      age > 50 ~ "Seenior",
+      TRUE ~ "Määratlemata"
+    )
+  )
+#kuvame read kontrolliks
+head(Isd)
 
 ```
 
@@ -445,10 +455,24 @@ heledaks (läbipaistvaks), kasuta positsiooni `jitter`. Rohkem võimalusi leiad
 spikrilt.
 
 ```{r fig.width=8, fig.height=6}
+# Koostame joonise: geom_violin diagramm koos hajutatud punktidega
+ggplot(data = Isd, aes(x = Drug, y = Diff, fill = Drug)) +
+  geom_violin(alpha = 0.5) +
+  geom_point(position = position_jitter(width = 0.2), alpha = 0.3, color = "black") +
+  labs(
+    title = "Ravimite mõju mälu muutusele (Diff) viiuldiagrammina",
+    x = "Ravim",
+    y = "Mälu skoori muutus (Diff)"
+  ) +
+  theme_minimal()
 
 
 
 ```
+# Kuidas hinnata tulemust, kuidas tõlgendada?  
+Tõlgendada saab järgmiselt: 
+geom_violin näitab andmete tihedust ja jaotust. Viiuli kõige laiem koht näitab vahemikku, kus asub kõige rohkem katsealuseid (kõige sagedasem väärtus). geom_point(position = "jitter")aga näitab iga üksiku saarlase reaalset tulemust punktina. Hajutamine (jitter) nihutab punkte veidi vasakule-paremale, et nad ei kattuks ja et näeks, kui palju andmepunkte igal alal päriselt on.
+
 
 ## Arvuliste ja diskreetsete muutujate skaleerimine
 
@@ -800,6 +824,34 @@ Uuri rohkem võimalusi erinevatelt
 [spikritelt](https://posit.co/resources/cheatsheets/).
 
 ```{r}
+# Laadime vajadusel lisateegi jooniste kombineerimiseks
+library(patchwork)
+
+# 1. Joonis: Uimastite nimefaktorite mõju mälu muutusele (Diff)
+j1 <- ggplot(Isd, aes(x = Drug, y = Diff, fill = Drug)) +
+  geom_boxplot(alpha = 0.7, outlier.shape = NA) +
+  geom_jitter(width = 0.2, alpha = 0.3, color = "black") +
+  labs(title = "Mälu skoori muutus ravimite lõikes", x = "Ravim", y = "Skoori muutus (Diff)") +
+  theme_classic() +
+  theme(legend.position = "none") # Eemaldame legendi nagu palutud
+
+# 2. Joonis: Vanuse ja mälu skoori seos koos trendijoonega
+j2 <- ggplot(Isd, aes(x = age, y = Diff, color = Drug)) +
+  geom_point(alpha = 0.5) +
+  geom_smooth(method = "lm", formula = y ~ x, se = FALSE, size = 1) +
+  labs(title = "Mälu skoori muutus sõltuvalt vanusest", x = "Vanus", y = "Skoori muutus (Diff)") +
+  theme_classic() +
+  theme(legend.position = "none") # Eemaldame legendi nagu palutud
+
+# Kombineerime joonised patchworki abil kõrvuti üheks tervikuks
+avaldamiskolblik_joonis <- j1 + j2 + 
+  plot_annotation(title = "Eksperimendi tulemused: Ravimite ja vanuse mõju mälutestile")
+
+# Kuvame tulemuse
+avaldamiskolblik_joonis
+
+# Salvestame tulemuse faili
+ggsave("avaldamiskolblik_joonis.png", plot = avaldamiskolblik_joonis, width = 10, height = 5, dpi = 300)
 
 
 
